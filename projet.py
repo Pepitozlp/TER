@@ -1,133 +1,123 @@
-import cv2 #opencv itself
-import numpy as np # matrix manipulations
+import cv2
+import numpy as np
 from matplotlib import pyplot as plt
 from sklearn.cluster import KMeans
 
-#on lit les images
+def convert_to_opponent_color_space(image):
+    """ Convertit une image RGB en espace de couleur opposé (rg, by, wb) """
+    r, g, b = image[:, :, 2], image[:, :, 1], image[:, :, 0]
+    rg = r - g
+    by = 2 * b - r - g
+    wb = r + g + b
+    return np.dstack((rg, by, wb))
+
+# Chargement des images
 image1 = cv2.imread("image5_resized.jpg")
 image2 = cv2.imread("image6_resized.jpg")
 image3 = cv2.imread("image4_resized.jpg")
 
-
-#on les mets en niveau de gris
+# Conversion en gris
 image1g = cv2.cvtColor(image1, cv2.COLOR_BGR2GRAY)
 image2g = cv2.cvtColor(image2, cv2.COLOR_BGR2GRAY)
 image3g = cv2.cvtColor(image3, cv2.COLOR_BGR2GRAY)
 
-cv2.imshow("image grise", image1g)
+cv2.imshow("Image grise 1", image1g)
 cv2.waitKey(0)
-cv2.imshow("image grise", image2g)
+cv2.imshow("Image grise 2", image2g)
 cv2.waitKey(0)
-cv2.imshow("image grise", image3g)
+cv2.imshow("Image grise 3", image3g)
 cv2.waitKey(0)
+cv2.destroyAllWindows()
 
-# récuperer les histogrammes des images en niveau de gris
+# Histogrammes gris
+histgris1 = cv2.calcHist([image1g], [0], None, [256], [0, 256])
+histgris2 = cv2.calcHist([image2g], [0], None, [256], [0, 256])
+histgris3 = cv2.calcHist([image3g], [0], None, [256], [0, 256])
 
-histgris1 = cv2.calcHist(image1g, [0], None, [256], [0,256])
-histgris2 = cv2.calcHist(image2g, [0], None, [256], [0,256])
-histgris3 = cv2.calcHist(image3g, [0], None, [256], [0,256])
+# conv en couleyr opposé
+img1_opponent = convert_to_opponent_color_space(image1)
+img2_opponent = convert_to_opponent_color_space(image2)
+img3_opponent = convert_to_opponent_color_space(image3)
 
-#on affiche les histogrammes en niveau de gris (bleu = image 1, orange = image 2, vert = image 3)
-plt.plot(histgris1)
-plt.plot(histgris2)
-plt.plot(histgris3)
+# Récupération histo
+hist_bins = 256
+hist_range = [0, 256]
+
+def compute_histograms(image):
+    histRG = cv2.calcHist([image], [0], None, [hist_bins], hist_range)
+    histBY = cv2.calcHist([image], [1], None, [hist_bins], hist_range)
+    histWB = cv2.calcHist([image], [2], None, [hist_bins], hist_range)
+    return histRG, histBY, histWB
+
+histRG1, histBY1, histWB1 = compute_histograms(img1_opponent)
+histRG2, histBY2, histWB2 = compute_histograms(img2_opponent)
+histRG3, histBY3, histWB3 = compute_histograms(img3_opponent)
+
+plt.figure(figsize=(12, 6))
+
+# Histogrammes en gris
+plt.subplot(2, 3, 1)
+plt.plot(histgris1, color='black')
+plt.title("Histogramme gris - Image 1")
+plt.subplot(2, 3, 2)
+plt.plot(histgris2, color='black')
+plt.title("Histogramme gris - Image 2")
+plt.subplot(2, 3, 3)
+plt.plot(histgris3, color='black')
+plt.title("Histogramme gris - Image 3")
+
+# Histogrammes en rg-by-wb
+plt.subplot(2, 3, 4)
+plt.plot(histRG1, label='RG', color='r')
+plt.plot(histBY1, label='BY', color='b')
+plt.plot(histWB1, label='WB', color='g')
+plt.legend()
+plt.title("Histogramme couleur - Image 1")
+
+plt.subplot(2, 3, 5)
+plt.plot(histRG2, label='RG', color='r')
+plt.plot(histBY2, label='BY', color='b')
+plt.plot(histWB2, label='WB', color='g')
+plt.legend()
+plt.title("Histogramme couleur - Image 2")
+
+plt.subplot(2, 3, 6)
+plt.plot(histRG3, label='RG', color='r')
+plt.plot(histBY3, label='BY', color='b')
+plt.plot(histWB3, label='WB', color='g')
+plt.legend()
+plt.title("Histogramme couleur - Image 3")
+
 plt.show()
 
-
-#images dans l'espace YUV
-img1_to_yuv = cv2.cvtColor(image1, cv2.COLOR_BGR2YUV)
-img2_to_yuv = cv2.cvtColor(image2, cv2.COLOR_BGR2YUV)
-img3_to_yuv = cv2.cvtColor(image3, cv2.COLOR_BGR2YUV)
-
-# récuperer les histogrammes couleurs des images
-
-histColorB1 = cv2.calcHist(img1_to_yuv, [0], None, [256], [0,256])
-histColorB2 = cv2.calcHist(img2_to_yuv, [0], None, [256], [0,256])
-histColorB3 = cv2.calcHist(img3_to_yuv, [0], None, [256], [0,256])
-
-histColorG1 = cv2.calcHist(img1_to_yuv, [1], None, [256], [0,256])
-histColorG2 = cv2.calcHist(img2_to_yuv, [1], None, [256], [0,256])
-histColorG3 = cv2.calcHist(img3_to_yuv, [1], None, [256], [0,256])
-
-histColorR1 = cv2.calcHist(img1_to_yuv, [2], None, [256], [0,256])
-histColorR2 = cv2.calcHist(img2_to_yuv, [2], None, [256], [0,256])
-histColorR3 = cv2.calcHist(img3_to_yuv, [2], None, [256], [0,256])
-
-
-#on affiche les histogrammes couleur (bleu = image 1, orange = image 2, vert = image 3)
-
-plt.plot(histColorB1)
-plt.plot(histColorB2)
-plt.plot(histColorB3)
-plt.show()
-
-plt.plot(histColorG1)
-plt.plot(histColorG2)
-plt.plot(histColorG3)
-plt.show()
-
-plt.plot(histColorR1)
-plt.plot(histColorR2)
-plt.plot(histColorR3)
-plt.show()
-
-# crée une représentation compact des histogrammes couleurs 
-def create_compact_representation(yuv_hist):
-    # Assemble YUV pour faire un vecteur
-    # Potentiellement utiliser PCA ici pour réduire dimensionnalité 
-    combined_hist = np.concatenate([yuv_hist[0].flatten(), 
-                                  yuv_hist[1].flatten(), 
-                                  yuv_hist[2].flatten()])
-    
-    # Noramlsiation 
+def create_compact_representation(hist_list):
+    combined_hist = np.concatenate([h.flatten() for h in hist_list])
     combined_hist = combined_hist / np.sum(combined_hist)
-    
     return combined_hist
 
-# Calcul distance entre histo
-def calculate_histogram_distance(hist1, hist2, method='chi-squared'):
-    if method == 'chi-squared':
-        eps = 1e-10
-        return np.sum((hist1 - hist2) ** 2 / (hist1 + hist2 + eps))
-    elif method == 'intersection':
-        # intersection
-        return np.sum(np.minimum(hist1, hist2))
-    else:
-        # dist eucli
-        return np.sqrt(np.sum((hist1 - hist2) ** 2))
+hist1_compact = create_compact_representation([histRG1, histBY1, histWB1])
+hist2_compact = create_compact_representation([histRG2, histBY2, histWB2])
+hist3_compact = create_compact_representation([histRG3, histBY3, histWB3])
 
-# regroupement Kmeans
-def cluster_histograms(feature_vectors, k=2):
-    from sklearn.cluster import KMeans
-    
-    # crée le model kmeans
-    kmeans = KMeans(n_clusters=k, random_state=42)
-    clusters = kmeans.fit_predict(feature_vectors)
-    
-    return clusters
-
-# representation chaque img
-hist1_compact = create_compact_representation([histColorB1, histColorG1, histColorR1])
-hist2_compact = create_compact_representation([histColorB2, histColorG2, histColorR2])
-hist3_compact = create_compact_representation([histColorB3, histColorG3, histColorR3])
+def calculate_histogram_distance(hist1, hist2):
+    eps = 1e-10
+    return np.sum((hist1 - hist2) ** 2 / (hist1 + hist2 + eps))
 
 
-# calcul distance entre histo
-print("\nDistances between histograms (Chi-squared distance):")
+print("\nDistances entre les histogrammes (rg-by-wb):")
 dist_1_2 = calculate_histogram_distance(hist1_compact, hist2_compact)
 dist_1_3 = calculate_histogram_distance(hist1_compact, hist3_compact)
 dist_2_3 = calculate_histogram_distance(hist2_compact, hist3_compact)
 
-print(f"Distance between Image 1 and Image 2: {dist_1_2:.4f}")
-print(f"Distance between Image 1 and Image 3: {dist_1_3:.4f}")
-print(f"Distance between Image 2 and Image 3: {dist_2_3:.4f}")
+print(f"Distance entre Image 1 et Image 2: {dist_1_2:.4f}")
+print(f"Distance entre Image 1 et Image 3: {dist_1_3:.4f}")
+print(f"Distance entre Image 2 et Image 3: {dist_2_3:.4f}")
 
-# regroupement
 feature_vectors = np.vstack([hist1_compact, hist2_compact, hist3_compact])
-clusters = cluster_histograms(feature_vectors, k=2)
+kmeans = KMeans(n_clusters=2, random_state=42)
+clusters = kmeans.fit_predict(feature_vectors)
 
-print("\nClustering results:")
-print(f"Image 1 belongs to cluster: {clusters[0]}")
-print(f"Image 2 belongs to cluster: {clusters[1]}")
-print(f"Image 3 belongs to cluster: {clusters[2]}")
-
+print("\nRésultats du clustering:")
+print(f"Image 1 appartient au cluster: {clusters[0]}")
+print(f"Image 2 appartient au cluster: {clusters[1]}")
+print(f"Image 3 appartient au cluster: {clusters[2]}")
